@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { orchestrate } from '@/lib/orchestrator';
 import { OrchestrationState } from '@/lib/types';
 
-// Hapus export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Naikkan batas waktu ke 60 detik
 
 export async function POST(req: NextRequest) {
   try {
