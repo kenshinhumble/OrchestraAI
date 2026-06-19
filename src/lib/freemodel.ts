@@ -9,7 +9,7 @@ export interface LLMConfig {
 // Membaca konfigurasi dari environment variables Next.js
 const defaultConfig: LLMConfig = {
   apiKey: process.env.LLM_API_KEY,
-  baseUrl: process.env.LLM_BASE_URL || 'https://zenmux.ai/z-ai',
+  baseUrl: process.env.LLM_BASE_URL || 'https://zenmux.ai/z-ai/glm-5.2-free', // Langsung menggunakan URL lengkap
   model: process.env.LLM_MODEL || 'glm-5.2-free',
 };
 
@@ -18,36 +18,51 @@ export async function callLLM(
   userPrompt: string,
   config: LLMConfig = defaultConfig
 ): Promise<string> {
-  // Jika ada API key, gunakan pemanggilan API nyata ke zenmux.ai
+  // Jika ada API key, gunakan pemanggilan API nyata
   if (config.apiKey) {
     try {
-      const response = await fetch(`${config.baseUrl}/v1/chat/completions`, {
+      // Karena URL sudah menyatu dengan model, kita panggil config.baseUrl langsung
+      const endpoint = config.baseUrl;
+      
+      console.log(`Calling LLM at: ${endpoint} with model: ${config.model}`);
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${config.apiKey}`,
         },
         body: JSON.stringify({
-          model: config.model,
+          model: config.model, // Tetap dikirim untuk berjaga-jaga jika API butuh body model
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
           temperature: 0.7,
-          // Memaksa model untuk mengembalikan JSON murni
-          response_format: { type: 'json_object' },
+          // Parameter response_format dihapus karena sering memicu 500 di API non-OpenAI
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        console.error('LLM API Error:', errorData);
-        throw new Error(`LLM request failed with status ${response.status}`);
+        const errorText = await response.text();
+        console.error('LLM API Error Status:', response.status);
+        console.error('LLM API Error Body:', errorText);
+        throw new Error(`LLM request failed with status ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      const content = data.choices[0].message.content;
-      return content;
+      
+      // Pastikan struktur respons sesuai (standar OpenAI: data.choices[0].message.content)
+      if (data.choices && data.choices.length > 0) {
+        return data.choices[0].message.content;
+      } else if (data.content) {
+        // Fallback jika strukturnya berbeda
+        return data.content;
+      } else {
+        console.error('Unexpected LLM Response Structure:', JSON.stringify(data));
+        throw new Error('Unexpected LLM response structure');
+      }
+
     } catch (error) {
       console.error('Error calling LLM:', error);
       throw error;
@@ -90,7 +105,7 @@ export async function callLLM(
 }
 
 export function parseJSONResponse<T>(response: string): T {
-  // Bersihkan response dari kemungkinan markdown code blocks jika model tetap memakai ```
+  // Bersihkan response dari kemungkinan markdown code blocks
   const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   return JSON.parse(cleaned) as T;
-  }
+      }
