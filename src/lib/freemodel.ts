@@ -1,4 +1,5 @@
-// src/lib/freemodel.ts
+
+  // src/lib/freemodel.ts
 
 export interface LLMConfig {
   apiKey?: string;
@@ -8,7 +9,7 @@ export interface LLMConfig {
 
 export const defaultConfig: LLMConfig = {
   apiKey: process.env.LLM_API_KEY || '',
-  baseUrl: process.env.LLM_BASE_URL || 'https://api.zenmux.ai/v1/chat/completions',
+  baseUrl: process.env.LLM_BASE_URL || 'https://zenmux.ai/api/v1/chat/completions', // URL yang benar
   model: process.env.LLM_MODEL || 'z-ai/glm-5.2-free',
 };
 
@@ -19,7 +20,7 @@ export async function callLLM(
 ): Promise<string> {
   if (config.apiKey && config.apiKey.length > 5) {
     try {
-      const endpoint = config.baseUrl || 'https://api.zenmux.ai/v1/chat/completions';
+      const endpoint = config.baseUrl || 'https://zenmux.ai/api/v1/chat/completions';
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -38,9 +39,8 @@ export async function callLLM(
       });
 
       if (!response.ok) {
-        // Ambil text error, tapi potong agar tidak membanjiri log Vercel jika itu HTML
         const errorText = await response.text();
-        const truncatedError = errorText.substring(0, 200); 
+        const truncatedError = errorText.substring(0, 500); // Batasi log agar tidak terlalu panjang
         console.error('LLM API Error Status:', response.status);
         console.error('LLM API Error Body:', truncatedError);
         throw new Error(`LLM request failed with status ${response.status}`);
@@ -62,8 +62,8 @@ export async function callLLM(
     }
   }
 
-  // Simulasi response untuk development (tanpa API Key)
-  console.warn('LLM_API_KEY not found or invalid. Running in simulation mode.');
+  // Mode Simulasi Internal (Hanya jika API Key tidak diisi)
+  console.warn('LLM_API_KEY not found. Running in simulation mode.');
   await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
   
   if (systemPrompt.includes('Architect')) {
