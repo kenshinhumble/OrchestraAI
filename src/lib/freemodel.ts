@@ -1,3 +1,5 @@
+  }
+
 // src/lib/freemodel.ts
 
 export interface LLMConfig {
@@ -18,10 +20,12 @@ export async function callLLM(
   userPrompt: string,
   config: LLMConfig = defaultConfig
 ): Promise<string> {
-  // Jika ada API key, gunakan pemanggilan API nyata
+  // Pastikan apiKey ada dan valid
   if (config.apiKey && config.apiKey.length > 5) {
     try {
-      const endpoint = config.baseUrl;
+      // PERBAIKAN ERROR DISINI: 
+      // Tambahkan fallback string kosong agar TypeScript tahu ini pasti string
+      const endpoint = config.baseUrl || 'https://zenmux.ai/z-ai/glm-5.2-free';
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -30,7 +34,7 @@ export async function callLLM(
           'Authorization': `Bearer ${config.apiKey}`,
         },
         body: JSON.stringify({
-          model: config.model,
+          model: config.model || 'glm-5.2-free',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
@@ -101,4 +105,4 @@ export async function callLLM(
 export function parseJSONResponse<T>(response: string): T {
   const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   return JSON.parse(cleaned) as T;
-}
+} 
