@@ -6,10 +6,10 @@ export interface LLMConfig {
   model?: string;
 }
 
-// Membaca konfigurasi dari environment variables Next.js
-const defaultConfig: LLMConfig = {
-  apiKey: process.env.LLM_API_KEY,
-  baseUrl: process.env.LLM_BASE_URL || 'https://zenmux.ai/z-ai/glm-5.2-free', // Langsung menggunakan URL lengkap
+// Membaca konfigurasi dari environment variables
+export const defaultConfig: LLMConfig = {
+  apiKey: process.env.LLM_API_KEY || '',
+  baseUrl: process.env.LLM_BASE_URL || 'https://zenmux.ai/z-ai/glm-5.2-free',
   model: process.env.LLM_MODEL || 'glm-5.2-free',
 };
 
@@ -19,13 +19,10 @@ export async function callLLM(
   config: LLMConfig = defaultConfig
 ): Promise<string> {
   // Jika ada API key, gunakan pemanggilan API nyata
-  if (config.apiKey) {
+  if (config.apiKey && config.apiKey.length > 5) {
     try {
-      // Karena URL sudah menyatu dengan model, kita panggil config.baseUrl langsung
       const endpoint = config.baseUrl;
       
-      console.log(`Calling LLM at: ${endpoint} with model: ${config.model}`);
-
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -33,13 +30,12 @@ export async function callLLM(
           'Authorization': `Bearer ${config.apiKey}`,
         },
         body: JSON.stringify({
-          model: config.model, // Tetap dikirim untuk berjaga-jaga jika API butuh body model
+          model: config.model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
           temperature: 0.7,
-          // Parameter response_format dihapus karena sering memicu 500 di API non-OpenAI
         }),
       });
 
@@ -52,11 +48,9 @@ export async function callLLM(
 
       const data = await response.json();
       
-      // Pastikan struktur respons sesuai (standar OpenAI: data.choices[0].message.content)
       if (data.choices && data.choices.length > 0) {
         return data.choices[0].message.content;
       } else if (data.content) {
-        // Fallback jika strukturnya berbeda
         return data.content;
       } else {
         console.error('Unexpected LLM Response Structure:', JSON.stringify(data));
@@ -70,7 +64,7 @@ export async function callLLM(
   }
 
   // --- Simulasi response untuk development (tanpa API Key) ---
-  console.warn('LLM_API_KEY not found. Running in simulation mode.');
+  console.warn('LLM_API_KEY not found or invalid. Running in simulation mode.');
   await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
   
   if (systemPrompt.includes('Architect')) {
@@ -105,7 +99,6 @@ export async function callLLM(
 }
 
 export function parseJSONResponse<T>(response: string): T {
-  // Bersihkan response dari kemungkinan markdown code blocks
   const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   return JSON.parse(cleaned) as T;
-      }
+}
