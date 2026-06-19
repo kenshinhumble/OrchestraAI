@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     // 1. Validasi Input
-    const { input } = await req.json();
+    const body = await req.json();
+    const input: string = body.input;
 
     if (!input || typeof input !== 'string' || input.trim().length < 5) {
       return NextResponse.json(
@@ -17,7 +18,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Batasi panjang input untuk mencegah penyalahgunaan token
     if (input.length > 500) {
       return NextResponse.json(
         { error: 'Input too long. Max 500 characters.' }, 
@@ -26,18 +26,19 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Jalankan Orchestrator
-    const finalState = await new Promise<OrchestrationState>((resolve) => {
-      orchestrate(input, (state) => {
-        // State updates bisa digunakan untuk streaming SSE nantinya
-      }).then(resolve);
+    const finalState = await new Promise<OrchestrationState>((resolve, reject) => {
+      orchestrate(input, () => {})
+        .then(resolve)
+        .catch(reject);
     });
 
     return NextResponse.json({ success: true, state: finalState });
     
   } catch (error) {
     console.error('Generation error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to generate application', detail: (error as Error).message },
+      { error: 'Failed to generate application', detail: errorMessage },
       { status: 500 }
     );
   }
