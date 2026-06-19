@@ -1,14 +1,9 @@
-  }
-
-// src/lib/freemodel.ts
-
-export interface LLMConfig {
+  export interface LLMConfig {
   apiKey?: string;
   baseUrl?: string;
   model?: string;
 }
 
-// Membaca konfigurasi dari environment variables
 export const defaultConfig: LLMConfig = {
   apiKey: process.env.LLM_API_KEY || '',
   baseUrl: process.env.LLM_BASE_URL || 'https://zenmux.ai/z-ai/glm-5.2-free',
@@ -20,11 +15,8 @@ export async function callLLM(
   userPrompt: string,
   config: LLMConfig = defaultConfig
 ): Promise<string> {
-  // Pastikan apiKey ada dan valid
   if (config.apiKey && config.apiKey.length > 5) {
     try {
-      // PERBAIKAN ERROR DISINI: 
-      // Tambahkan fallback string kosong agar TypeScript tahu ini pasti string
       const endpoint = config.baseUrl || 'https://zenmux.ai/z-ai/glm-5.2-free';
       
       const response = await fetch(endpoint, {
@@ -60,14 +52,13 @@ export async function callLLM(
         console.error('Unexpected LLM Response Structure:', JSON.stringify(data));
         throw new Error('Unexpected LLM response structure');
       }
-
     } catch (error) {
       console.error('Error calling LLM:', error);
       throw error;
     }
   }
 
-  // --- Simulasi response untuk development (tanpa API Key) ---
+  // Simulasi response untuk development (tanpa API Key)
   console.warn('LLM_API_KEY not found or invalid. Running in simulation mode.');
   await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
   
@@ -105,4 +96,4 @@ export async function callLLM(
 export function parseJSONResponse<T>(response: string): T {
   const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   return JSON.parse(cleaned) as T;
-} 
+}
