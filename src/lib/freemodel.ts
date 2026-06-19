@@ -1,39 +1,61 @@
-// Interface untuk pemanggilan LLM
+// src/lib/freemodel.ts
+
 export interface LLMConfig {
   apiKey?: string;
   baseUrl?: string;
   model?: string;
 }
 
-// Fungsi simulasi untuk development tanpa API Key
+// Membaca konfigurasi dari environment variables Next.js
+const defaultConfig: LLMConfig = {
+  apiKey: process.env.LLM_API_KEY,
+  baseUrl: process.env.LLM_BASE_URL || 'https://zenmux.ai/z-ai',
+  model: process.env.LLM_MODEL || 'glm-5.2-free',
+};
+
 export async function callLLM(
   systemPrompt: string,
   userPrompt: string,
-  config?: LLMConfig
+  config: LLMConfig = defaultConfig
 ): Promise<string> {
-  // Jika ada API key, gunakan pemanggilan nyata
-  if (config?.apiKey) {
-    const response = await fetch(`${config.baseUrl || 'https://api.openai.com/v1'}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model || 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature: 0.7,
-      }),
-    });
-    
-    const data = await response.json();
-    return data.choices[0].message.content;
+  // Jika ada API key, gunakan pemanggilan API nyata ke zenmux.ai
+  if (config.apiKey) {
+    try {
+      const response = await fetch(`${config.baseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.7,
+          // Memaksa model untuk mengembalikan JSON murni
+          response_format: { type: 'json_object' },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('LLM API Error:', errorData);
+        throw new Error(`LLM request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+      return content;
+    } catch (error) {
+      console.error('Error calling LLM:', error);
+      throw error;
+    }
   }
 
-  // Simulasi response untuk development
+  // --- Simulasi response untuk development (tanpa API Key) ---
+  console.warn('LLM_API_KEY not found. Running in simulation mode.');
   await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
   
   if (systemPrompt.includes('Architect')) {
@@ -68,7 +90,7 @@ export async function callLLM(
 }
 
 export function parseJSONResponse<T>(response: string): T {
-  // Bersihkan response dari kemungkinan markdown code blocks
+  // Bersihkan response dari kemungkinan markdown code blocks jika model tetap memakai ```
   const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
   return JSON.parse(cleaned) as T;
-}
+  }
