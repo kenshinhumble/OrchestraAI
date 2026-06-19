@@ -1,4 +1,6 @@
-  export interface LLMConfig {
+// src/lib/freemodel.ts
+
+export interface LLMConfig {
   apiKey?: string;
   baseUrl?: string;
   model?: string;
@@ -6,8 +8,8 @@
 
 export const defaultConfig: LLMConfig = {
   apiKey: process.env.LLM_API_KEY || '',
-  baseUrl: process.env.LLM_BASE_URL || 'https://zenmux.ai/z-ai/glm-5.2-free',
-  model: process.env.LLM_MODEL || 'glm-5.2-free',
+  baseUrl: process.env.LLM_BASE_URL || 'https://api.zenmux.ai/v1/chat/completions',
+  model: process.env.LLM_MODEL || 'z-ai/glm-5.2-free',
 };
 
 export async function callLLM(
@@ -17,7 +19,7 @@ export async function callLLM(
 ): Promise<string> {
   if (config.apiKey && config.apiKey.length > 5) {
     try {
-      const endpoint = config.baseUrl || 'https://zenmux.ai/z-ai/glm-5.2-free';
+      const endpoint = config.baseUrl || 'https://api.zenmux.ai/v1/chat/completions';
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -26,7 +28,7 @@ export async function callLLM(
           'Authorization': `Bearer ${config.apiKey}`,
         },
         body: JSON.stringify({
-          model: config.model || 'glm-5.2-free',
+          model: config.model || 'z-ai/glm-5.2-free',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
@@ -36,10 +38,12 @@ export async function callLLM(
       });
 
       if (!response.ok) {
+        // Ambil text error, tapi potong agar tidak membanjiri log Vercel jika itu HTML
         const errorText = await response.text();
+        const truncatedError = errorText.substring(0, 200); 
         console.error('LLM API Error Status:', response.status);
-        console.error('LLM API Error Body:', errorText);
-        throw new Error(`LLM request failed with status ${response.status}: ${errorText}`);
+        console.error('LLM API Error Body:', truncatedError);
+        throw new Error(`LLM request failed with status ${response.status}`);
       }
 
       const data = await response.json();
