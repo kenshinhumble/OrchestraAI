@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { orchestrate } from '@/lib/orchestrator';
 import { OrchestrationState } from '@/lib/types';
 
-export const runtime = 'edge';
+// Hapus export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Naikkan batas waktu ke 60 detik
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Validasi Input
     const body = await req.json();
     const input: string = body.input;
 
@@ -25,7 +25,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Jalankan Orchestrator
     const finalState = await new Promise<OrchestrationState>((resolve, reject) => {
       orchestrate(input, () => {})
         .then(resolve)
